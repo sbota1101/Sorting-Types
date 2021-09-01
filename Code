@@ -1,0 +1,217 @@
+ public List<AutomatedProcedureGroup> getAutomatedProcedureGroupList() {
+        mAutomatedProcedureListGroup.clear();
+
+        List<AutomatedProcedureGroup> newProcedureGroupList = new ArrayList<>();
+
+    private void sortProceduresLists(List<AutomatedProcedureGroup> autoProcedureGroupList) {
+        List<AutomatedProcedure> agaSortedList = sortAGAWeightList(autoProcedureGroupList);
+        if (!agaSortedList.isEmpty()) {
+            autoProcedureGroupList.get(getIndexByProcedureType(autoProcedureGroupList, AutomatedProcedureType.AUTO_GRADATION_ADJUSTMENT)).setAutomatedProcedureList(agaSortedList);
+        }
+
+        List<AutomatedProcedure> mfcSortedList = sortMFCSurfaceWeightList(autoProcedureGroupList);
+        if (!mfcSortedList.isEmpty()) {
+            autoProcedureGroupList.get(getIndexByProcedureType(autoProcedureGroupList, AutomatedProcedureType.MEDIA_FAMILY_CALIBRATION)).setAutomatedProcedureList(mfcSortedList);
+        }
+    }
+
+    private int getIndexByProcedureType(List<AutomatedProcedureGroup> newProcedureGroupList, AutomatedProcedureType procedureType) {
+        int index = 0;
+        for (AutomatedProcedureGroup p : newProcedureGroupList) {
+            if (p.getAutomatedProcedureType() == procedureType) {
+                break;
+            }
+            index++;
+        }
+        return index;
+    }
+        return newAutomatedProcedureGroupList;
+
+    }
+    
+      // a comparator regarding weight asc and desc
+    private class MFCWeightSorter implements Comparator<AutomatedProcedure> {
+
+        private boolean mTypeOfSorting;
+
+        MFCWeightSorter(boolean typeOfSorting) {
+            mTypeOfSorting = typeOfSorting;
+        }
+
+        @Override
+        public int compare(AutomatedProcedure m1, AutomatedProcedure m2) {
+            int value = 0;
+
+            if (mTypeOfSorting) {
+                value = Integer.compare(m1.getSelectedMedia().getWeight(), m2.getSelectedMedia().getWeight());
+            } else {
+                value = Integer.compare(m2.getSelectedMedia().getWeight(), m1.getSelectedMedia().getWeight());
+            }
+
+            return value;
+        }
+    }
+
+    private boolean isSortingAga(List<AutomatedProcedure> previousList, List<AutomatedProcedure> nextList, boolean isAscending) {
+        List<AutomatedProcedure> previousListSelectedProcedures = previousList.stream().filter(AutomatedProcedure::isSelected).collect(Collectors.toList());
+        int max = findMax(previousListSelectedProcedures);
+        int min = findMin(previousListSelectedProcedures);
+        int maxAga = findMax(nextList);
+        int minAga = findMin(nextList);
+        if (isAscending) {
+            return findClosestNumber(max, maxAga, minAga);
+        }
+        return findClosestNumber(min, maxAga, minAga);
+
+    }
+
+    private boolean isSortingMfc(List<AutomatedProcedure> previousList, List<AutomatedProcedure> nextList, boolean isAscending) {
+        List<AutomatedProcedure> previousListSelectedProcedures = previousList.stream().filter(AutomatedProcedure::isSelected).collect(Collectors.toList());
+        List<AutomatedProcedure> nextListSelectedProcedures = nextList.stream().filter(AutomatedProcedure::isSelected).collect(Collectors.toList());
+        int max = findMax(previousListSelectedProcedures);
+        int min = findMin(previousListSelectedProcedures);
+        int maxMFC = findMax(nextListSelectedProcedures);
+        int minMFC = findMin(nextListSelectedProcedures);
+        if (isAscending) {
+            return findClosestNumber(max, maxMFC, minMFC);
+        }
+        return findClosestNumber(min, maxMFC, minMFC);
+
+    }
+
+    private boolean isAtLeastOneProcedureSelected(List<AutomatedProcedure> previousList) {
+        List<AutomatedProcedure> previousListSelectedProcedures = previousList.stream().filter(AutomatedProcedure::isSelected).collect(Collectors.toList());
+        return (!previousListSelectedProcedures.isEmpty());
+
+    }
+
+    private boolean findClosestNumber(int max, int maxMFC, int minMFC) {
+        return (Math.abs(max - maxMFC) > Math.abs(max - minMFC));
+    }
+
+    private List<AutomatedProcedure> sortAGAWeightList(List<AutomatedProcedureGroup> newProcedureGroupList) {
+        List<AutomatedProcedure> procList = new ArrayList<>();
+        if (!newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.AUTO_GRADATION_ADJUSTMENT).collect(Collectors.toList()).isEmpty()) {
+            procList = newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.AUTO_GRADATION_ADJUSTMENT).collect(Collectors.toList()).get(0).getAutomatedProcedureList();
+            Collections.sort(procList, new MFCWeightSorter(true));
+        }
+        return procList;
+    }
+
+    private List<AutomatedProcedure> sortMFCSurfaceWeightList(List<AutomatedProcedureGroup> newProcedureGroupList) {
+
+        List<AutomatedProcedure> finalList = new ArrayList<>();
+        List<AutomatedProcedure> agaList = sortAgaList(newProcedureGroupList);
+        List<AutomatedProcedure> shadingList = sortShadingList(newProcedureGroupList);
+        if (!newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.MEDIA_FAMILY_CALIBRATION).collect(Collectors.toList()).isEmpty()) {
+            List<AutomatedProcedure> procList = newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.MEDIA_FAMILY_CALIBRATION).collect(Collectors.toList()).get(0).getAutomatedProcedureList();
+            List<AutomatedProcedure> procListMfc = new ArrayList<>();
+            List<AutomatedProcedure> procListG7 = new ArrayList<>();
+            procListG7.addAll(mStandaloneG7Procedures);
+            for (AutomatedProcedure proc : procList) {
+                if (!procListG7.contains(proc)) {
+                    procListMfc.add(proc);
+                }
+            }
+            List<AutomatedProcedure> coatedList = procListMfc.stream().filter(predicate -> MediaUtils.getPreferredMediaFamily(predicate.getSelectedMedia().getSurfaceType()).equals("Coated")).collect(Collectors.toList());
+            List<AutomatedProcedure> uncoatedList = procListMfc.stream().filter(predicate -> MediaUtils.getPreferredMediaFamily(predicate.getSelectedMedia().getSurfaceType()).equals("Uncoated")).collect(Collectors.toList());
+            List<AutomatedProcedure> nothingList = procListMfc.stream().filter(predicate -> MediaUtils.getPreferredMediaFamily(predicate.getSelectedMedia().getSurfaceType()).equals("")).collect(Collectors.toList());
+            List<AutomatedProcedure> coatedListG7 = procListG7.stream().filter(predicate -> MediaUtils.getPreferredMediaFamily(predicate.getSelectedMedia().getSurfaceType()).equals("Coated")).collect(Collectors.toList());
+            List<AutomatedProcedure> uncoatedListG7 = procListG7.stream().filter(predicate -> MediaUtils.getPreferredMediaFamily(predicate.getSelectedMedia().getSurfaceType()).equals("Uncoated")).collect(Collectors.toList());
+            List<AutomatedProcedure> nothingListG7 = procListG7.stream().filter(predicate -> MediaUtils.getPreferredMediaFamily(predicate.getSelectedMedia().getSurfaceType()).equals("")).collect(Collectors.toList());
+            List<AutomatedProcedure> emptyList = new ArrayList<>();
+            boolean mfcSortWeightAscending = isSortingAga(agaList, uncoatedList, true);
+
+            if (!agaList.isEmpty() && isAtLeastOneProcedureSelected(agaList) || !shadingList.isEmpty() && isAtLeastOneProcedureSelected(shadingList)) {
+                mfcSortWeightAscending = sortLists(uncoatedList, coatedList, nothingList, findListThatisNotEmpty(nothingListG7, coatedListG7, uncoatedListG7), mfcSortWeightAscending);
+                sortLists(nothingListG7, coatedListG7, uncoatedListG7, emptyList, mfcSortWeightAscending);
+                finalList = buildFinalList(uncoatedList, coatedList, nothingList, nothingListG7, coatedListG7, uncoatedListG7);
+            } else {
+                mfcSortWeightAscending = sortLists(nothingList, coatedList, uncoatedList, findListThatisNotEmpty(uncoatedListG7, coatedListG7, nothingListG7), true);
+                sortLists(uncoatedListG7, coatedListG7, nothingListG7, emptyList, mfcSortWeightAscending);
+                finalList = buildFinalList(nothingList, coatedList, uncoatedList, uncoatedListG7, coatedListG7, nothingListG7);
+
+            }
+        }
+        return finalList;
+    }
+
+    private List<AutomatedProcedure> findListThatisNotEmpty(List<AutomatedProcedure> list1, List<AutomatedProcedure> list2, List<AutomatedProcedure> list3) {
+        List<AutomatedProcedure> emptyList = new ArrayList<>();
+        if (!list1.isEmpty() && isAtLeastOneProcedureSelected(list1)) {
+            return list1;
+        }
+        if (!list2.isEmpty() && isAtLeastOneProcedureSelected(list2)) {
+            return list2;
+        }
+        if (!list3.isEmpty() && isAtLeastOneProcedureSelected(list3)) {
+            return list3;
+        }
+        return emptyList;
+    }
+
+    private boolean sortLists(List<AutomatedProcedure> list1, List<AutomatedProcedure> list2, List<AutomatedProcedure> list3, List<AutomatedProcedure> list4, boolean mfcSortWeightAscending) {
+        List<AutomatedProcedure> emptyList = new ArrayList<>();
+        boolean mfcSortWeight = mfcSortWeightAscending;
+        if (!list1.isEmpty() && isAtLeastOneProcedureSelected(list1)) {
+            Collections.sort(list1, (new MFCWeightSorter(mfcSortWeight)));
+            mfcSortWeight = isSortingMfc(list1, findListThatisNotEmpty(list2, list3, list4), mfcSortWeight);
+        }
+        if (!list2.isEmpty() && isAtLeastOneProcedureSelected(list2)) {
+            Collections.sort(list2, (new MFCWeightSorter(mfcSortWeight)));
+            mfcSortWeight = isSortingMfc(list2, findListThatisNotEmpty(emptyList, list3, list4), mfcSortWeight);
+        }
+        if (!list3.isEmpty() && isAtLeastOneProcedureSelected(list3)) {
+            Collections.sort(list3, (new MFCWeightSorter(mfcSortWeight)));
+            mfcSortWeight = isSortingMfc(list3, list4, mfcSortWeight);
+        }
+        return mfcSortWeight;
+    }
+
+    private List<AutomatedProcedure> sortShadingList(List<AutomatedProcedureGroup> newProcedureGroupList) {
+        List<AutomatedProcedure> shadingList = new ArrayList<>();
+        if (!newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.SHADING_CORRECTION).collect(Collectors.toList()).isEmpty()) {
+            shadingList = newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.SHADING_CORRECTION).collect(Collectors.toList()).get(0).getAutomatedProcedureList();
+        }
+        return shadingList;
+    }
+
+    private List<AutomatedProcedure> sortAgaList(List<AutomatedProcedureGroup> newProcedureGroupList) {
+        List<AutomatedProcedure> agaList = new ArrayList<>();
+        if (!newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.AUTO_GRADATION_ADJUSTMENT).collect(Collectors.toList()).isEmpty()) {
+            agaList = newProcedureGroupList.stream().filter(predicate -> predicate.getAutomatedProcedureType() == AutomatedProcedureType.AUTO_GRADATION_ADJUSTMENT).collect(Collectors.toList()).get(0).getAutomatedProcedureList();
+        }
+        return agaList;
+    }
+
+    private List<AutomatedProcedure> buildFinalList(List<AutomatedProcedure> list1, List<AutomatedProcedure> list2, List<AutomatedProcedure> list3, List<AutomatedProcedure> list4, List<AutomatedProcedure> list5, List<AutomatedProcedure> list6) {
+        List<AutomatedProcedure> finalList = new ArrayList<>();
+        finalList.addAll(list1);
+        finalList.addAll(list2);
+        finalList.addAll(list3);
+
+        if (isAtLeastOneProcedureSelected(list3)) {
+            finalList.addAll(list4);
+            finalList.addAll(list5);
+            finalList.addAll(list6);
+        } else if (isAtLeastOneProcedureSelected(list2)) {
+            finalList.addAll(list5);
+            finalList.addAll(list6);
+            finalList.addAll(list4);
+        } else if (isAtLeastOneProcedureSelected(list1)) {
+            finalList.addAll(list6);
+            finalList.addAll(list5);
+            finalList.addAll(list4);
+        }
+
+        return finalList;
+
+    }
+
+    private int findMax(List<AutomatedProcedure> listOfEntries) {
+        return listOfEntries.stream().mapToInt(v -> v.getSelectedMedia().getWeight()).max().orElse(Integer.MIN_VALUE);
+    }
+
+    private int findMin(List<AutomatedProcedure> listOfEntries) {
+        return listOfEntries.stream().mapToInt(v -> v.getSelectedMedia().getWeight()).min().orElse(Integer.MAX_VALUE);
+    }
